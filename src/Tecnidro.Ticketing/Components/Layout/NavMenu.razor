@@ -13,10 +13,10 @@
 <MudNavMenu Class="main-nav">
     <MudNavLink Href="" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Dashboard">Dashboard</MudNavLink>
     <MudNavLink Href="tickets" Icon="@Icons.Material.Filled.ConfirmationNumber">Tickets</MudNavLink>
-    <MudNavLink Href="Account/Manage" Icon="@Icons.Material.Filled.ManageAccounts">Mi cuenta</MudNavLink>
 
     <AuthorizeView>
         <Authorized>
+            <MudNavLink Href="Account/Manage" Icon="@Icons.Material.Filled.ManageAccounts">Mi cuenta</MudNavLink>
             <form action="Account/Logout" method="post" class="logout-form">
                 <AntiforgeryToken />
                 <input type="hidden" name="ReturnUrl" value="@currentUrl" />
