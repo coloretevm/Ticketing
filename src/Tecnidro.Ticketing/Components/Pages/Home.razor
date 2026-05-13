@@ -1,7 +1,10 @@
 @page "/"
+@rendermode InteractiveServer
 @inject TicketWorkspaceService Tickets
 
 <PageTitle>Dashboard | Tecnidro Ticketing</PageTitle>
+
+<MudPopoverProvider />
 
 @{
     var summary = Tickets.GetSummary();

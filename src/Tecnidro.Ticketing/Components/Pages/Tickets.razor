@@ -1,8 +1,12 @@
 @page "/tickets"
+@rendermode InteractiveServer
 @inject TicketWorkspaceService TicketWorkspace
 @inject ISnackbar Snackbar
 
 <PageTitle>Tickets | Tecnidro Ticketing</PageTitle>
+
+<MudPopoverProvider />
+<MudSnackbarProvider />
 
 <MudStack Spacing="3">
     <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Class="page-heading">
