@@ -106,7 +106,34 @@ Durante el desarrollo local la app queda disponible en:
 http://localhost:5274
 ```
 
-El dashboard y la pantalla de tickets usan datos demo en memoria mientras se implementa la persistencia real y la integracion con Microsoft Graph.
+El dashboard y la pantalla de tickets leen los tickets desde SQLite. La sincronizacion con Outlook se ejecuta desde el boton `Sincronizar Outlook`.
+
+## Configuracion Outlook / Microsoft Graph
+
+Para importar emails reales desde Outlook/Microsoft 365 hace falta una App Registration en Entra ID con permisos de aplicacion para leer el buzon de soporte.
+
+Valores necesarios para desarrollo local:
+
+- `TenantId`
+- `ClientId`
+- `ClientSecret`
+- `MailboxAddress`, por ejemplo `soporte@tecnidro.it`
+
+Configurar secretos locales:
+
+```powershell
+dotnet user-secrets set "GraphMailbox:TenantId" "TU_TENANT_ID" --project src\Tecnidro.Ticketing\Tecnidro.Ticketing.csproj
+dotnet user-secrets set "GraphMailbox:ClientId" "TU_CLIENT_ID" --project src\Tecnidro.Ticketing\Tecnidro.Ticketing.csproj
+dotnet user-secrets set "GraphMailbox:ClientSecret" "TU_CLIENT_SECRET" --project src\Tecnidro.Ticketing\Tecnidro.Ticketing.csproj
+dotnet user-secrets set "GraphMailbox:MailboxAddress" "soporte@tecnidro.it" --project src\Tecnidro.Ticketing\Tecnidro.Ticketing.csproj
+```
+
+Permiso minimo previsto en Microsoft Graph:
+
+- `Mail.ReadWrite` de tipo `Application`
+- Admin consent concedido en el tenant
+
+La pantalla `Tickets` tiene el boton `Sincronizar Outlook`. Lee mensajes no leidos del Inbox, crea tickets nuevos en SQLite y marca esos mensajes como leidos si `GraphMailbox:MarkMessagesAsRead` esta activo.
 
 ## Despliegue previsto
 

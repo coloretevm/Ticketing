@@ -24,7 +24,8 @@ builder.Services.AddCascadingAuthenticationState();
 builder.Services.AddScoped<IdentityUserAccessor>();
 builder.Services.AddScoped<IdentityRedirectManager>();
 builder.Services.AddScoped<AuthenticationStateProvider, IdentityRevalidatingAuthenticationStateProvider>();
-builder.Services.AddSingleton<TicketWorkspaceService>();
+builder.Services.AddScoped<TicketWorkspaceService>();
+builder.Services.AddScoped<OutlookMailboxService>();
 builder.Services.Configure<GraphMailboxOptions>(
     builder.Configuration.GetSection(GraphMailboxOptions.SectionName));
 

@@ -1,6 +1,7 @@
 @page "/tickets"
 @rendermode InteractiveServer
 @inject TicketWorkspaceService TicketWorkspace
+@inject OutlookMailboxService OutlookMailbox
 @inject ISnackbar Snackbar
 
 <PageTitle>Tickets | Tecnidro Ticketing</PageTitle>
@@ -14,10 +15,28 @@
             <MudText Typo="Typo.h4">Tickets</MudText>
             <MudText Typo="Typo.body1" Color="Color.Secondary">Bandeja de trabajo creada a partir de correos Outlook/Microsoft 365.</MudText>
         </div>
-        <MudButton Variant="Variant.Outlined" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Sync">
-            Sincronizar Outlook
+        <MudButton Variant="Variant.Outlined"
+                   Color="Color.Primary"
+                   StartIcon="@Icons.Material.Filled.Sync"
+                   Disabled="_syncing"
+                   OnClick="SyncOutlookAsync">
+            @(_syncing ? "Sincronizando..." : "Sincronizar Outlook")
         </MudButton>
     </MudStack>
+
+    @if (!_mailboxConfigured)
+    {
+        <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined">
+            Outlook todavia no esta configurado. Carga TenantId, ClientId, ClientSecret y MailboxAddress con user-secrets para poder crear tickets desde emails reales.
+        </MudAlert>
+    }
+
+    @if (!string.IsNullOrWhiteSpace(_syncMessage))
+    {
+        <MudAlert Severity="_syncSeverity" Variant="Variant.Outlined">
+            @_syncMessage
+        </MudAlert>
+    }
 
     <MudGrid Spacing="3">
         <MudItem xs="12" lg="8">
@@ -57,7 +76,7 @@
                 <MudPaper Class="detail-panel empty-detail" Elevation="0">
                     <MudIcon Icon="@Icons.Material.Filled.ConfirmationNumber" Size="Size.Large" Color="Color.Primary" />
                     <MudText Typo="Typo.h6">Selecciona un ticket</MudText>
-                    <MudText Typo="Typo.body2">El detalle, historial y cierre apareceran aqui.</MudText>
+                    <MudText Typo="Typo.body2">El detalle, historial y cierre apareceran aqui. Si la lista esta vacia, sincroniza Outlook.</MudText>
                 </MudPaper>
             }
             else
@@ -135,11 +154,22 @@
     private IReadOnlyList<Ticket> _tickets = [];
     private Ticket? _selectedTicket;
     private string _resolutionText = string.Empty;
+    private bool _syncing;
+    private bool _mailboxConfigured;
+    private string? _syncMessage;
+    private Severity _syncSeverity = Severity.Info;
 
-    protected override void OnInitialized()
+    protected override async Task OnInitializedAsync()
     {
-        _tickets = TicketWorkspace.GetTickets();
+        _mailboxConfigured = OutlookMailbox.IsConfigured;
+        await ReloadTicketsAsync();
+    }
+
+    private async Task ReloadTicketsAsync()
+    {
+        _tickets = await TicketWorkspace.GetTicketsAsync();
         _selectedTicket = _tickets.FirstOrDefault();
+        _resolutionText = _selectedTicket?.ResolucionTexto ?? string.Empty;
     }
 
     private void SelectTicket(Ticket ticket)
@@ -148,7 +178,7 @@
         _resolutionText = ticket.ResolucionTexto ?? string.Empty;
     }
 
-    private void CloseSelectedTicket()
+    private async Task CloseSelectedTicket()
     {
         if (_selectedTicket is null)
         {
@@ -157,13 +187,38 @@
 
         try
         {
-            _selectedTicket = TicketWorkspace.CloseTicket(_selectedTicket.Id, _resolutionText);
-            _tickets = TicketWorkspace.GetTickets();
+            _selectedTicket = await TicketWorkspace.CloseTicketAsync(_selectedTicket.Id, _resolutionText);
+            _tickets = await TicketWorkspace.GetTicketsAsync();
             Snackbar.Add("Ticket cerrado y email saliente registrado.", Severity.Success);
         }
         catch (Exception ex)
         {
             Snackbar.Add(ex.Message, Severity.Error);
+        }
+    }
+
+    private async Task SyncOutlookAsync()
+    {
+        _syncing = true;
+
+        try
+        {
+            var result = await OutlookMailbox.SyncUnreadInboxAsync();
+            await ReloadTicketsAsync();
+
+            _syncSeverity = result.Created > 0 ? Severity.Success : Severity.Info;
+            _syncMessage = result.Message;
+            Snackbar.Add(result.Message, _syncSeverity);
+        }
+        catch (Exception ex)
+        {
+            _syncSeverity = Severity.Error;
+            _syncMessage = $"Error sincronizando Outlook: {ex.Message}";
+            Snackbar.Add(_syncMessage, Severity.Error);
+        }
+        finally
+        {
+            _syncing = false;
         }
     }
 

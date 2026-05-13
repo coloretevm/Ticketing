@@ -11,4 +11,14 @@ public class GraphMailboxOptions
     public string ClientSecret { get; set; } = string.Empty;
 
     public string MailboxAddress { get; set; } = string.Empty;
+
+    public int MaxMessagesPerSync { get; set; } = 20;
+
+    public bool MarkMessagesAsRead { get; set; } = true;
+
+    public bool IsConfigured =>
+        !string.IsNullOrWhiteSpace(TenantId) &&
+        !string.IsNullOrWhiteSpace(ClientId) &&
+        !string.IsNullOrWhiteSpace(ClientSecret) &&
+        !string.IsNullOrWhiteSpace(MailboxAddress);
 }
