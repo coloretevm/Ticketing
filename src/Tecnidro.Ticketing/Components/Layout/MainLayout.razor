@@ -1,0 +1,67 @@
+@inherits LayoutComponentBase
+
+<MudThemeProvider Theme="_theme" />
+<MudPopoverProvider />
+<MudDialogProvider />
+<MudSnackbarProvider />
+
+<MudLayout>
+    <MudAppBar Elevation="0" Class="app-bar">
+        <MudIconButton Icon="@Icons.Material.Filled.Menu" Color="Color.Inherit" Edge="Edge.Start" OnClick="ToggleDrawer" />
+        <MudText Typo="Typo.h6">Tecnidro Ticketing</MudText>
+        <MudSpacer />
+        <AuthorizeView>
+            <Authorized>
+                <MudText Typo="Typo.body2">@context.User.Identity?.Name</MudText>
+            </Authorized>
+            <NotAuthorized>
+                <MudButton Href="Account/Login" Variant="Variant.Text" Color="Color.Inherit">Login</MudButton>
+            </NotAuthorized>
+        </AuthorizeView>
+    </MudAppBar>
+
+    <MudDrawer @bind-Open="_drawerOpen" ClipMode="DrawerClipMode.Always" Elevation="0" Class="app-drawer">
+        <NavMenu />
+    </MudDrawer>
+
+    <MudMainContent Class="main-content">
+        <MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="page-container">
+            @Body
+        </MudContainer>
+    </MudMainContent>
+</MudLayout>
+
+<div id="blazor-error-ui">
+    Ocurrio un error inesperado.
+    <a href="" class="reload">Reload</a>
+    <a class="dismiss">x</a>
+</div>
+
+@code {
+    private bool _drawerOpen = true;
+
+    private readonly MudTheme _theme = new()
+    {
+        PaletteLight = new PaletteLight
+        {
+            Primary = "#14532d",
+            Secondary = "#0f766e",
+            Tertiary = "#f59e0b",
+            AppbarBackground = "#0f172a",
+            Background = "#f4f7f5",
+            Surface = "#ffffff",
+            DrawerBackground = "#102019",
+            DrawerText = "#dbe7df",
+            DrawerIcon = "#9fb6a9"
+        },
+        LayoutProperties = new LayoutProperties
+        {
+            DefaultBorderRadius = "8px"
+        }
+    };
+
+    private void ToggleDrawer()
+    {
+        _drawerOpen = !_drawerOpen;
+    }
+}

@@ -1,0 +1,186 @@
+@page "/tickets"
+@inject TicketWorkspaceService TicketWorkspace
+@inject ISnackbar Snackbar
+
+<PageTitle>Tickets | Tecnidro Ticketing</PageTitle>
+
+<MudStack Spacing="3">
+    <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Class="page-heading">
+        <div>
+            <MudText Typo="Typo.h4">Tickets</MudText>
+            <MudText Typo="Typo.body1" Color="Color.Secondary">Bandeja de trabajo creada a partir de correos Outlook/Microsoft 365.</MudText>
+        </div>
+        <MudButton Variant="Variant.Outlined" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Sync">
+            Sincronizar Outlook
+        </MudButton>
+    </MudStack>
+
+    <MudGrid Spacing="3">
+        <MudItem xs="12" lg="8">
+            <MudPaper Class="work-surface" Elevation="0">
+                <MudTable Items="_tickets" Hover="true" Dense="true" Breakpoint="Breakpoint.Sm" Class="ticket-table" RowClassFunc="SelectedRowClass">
+                    <HeaderContent>
+                        <MudTh>Numero</MudTh>
+                        <MudTh>Cliente</MudTh>
+                        <MudTh>Asunto</MudTh>
+                        <MudTh>Prioridad</MudTh>
+                        <MudTh>Estado</MudTh>
+                        <MudTh></MudTh>
+                    </HeaderContent>
+                    <RowTemplate>
+                        <MudTd DataLabel="Numero">@context.Numero</MudTd>
+                        <MudTd DataLabel="Cliente">@context.NombreCliente</MudTd>
+                        <MudTd DataLabel="Asunto">@context.Asunto</MudTd>
+                        <MudTd DataLabel="Prioridad">
+                            <MudChip T="string" Size="Size.Small" Color="@PriorityColor(context.Prioridad)">@context.Prioridad</MudChip>
+                        </MudTd>
+                        <MudTd DataLabel="Estado">
+                            <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Color="@StatusColor(context.Estado)">@context.Estado</MudChip>
+                        </MudTd>
+                        <MudTd>
+                            <MudTooltip Text="Abrir detalle">
+                                <MudIconButton Icon="@Icons.Material.Filled.ChevronRight" Color="Color.Primary" OnClick="@(() => SelectTicket(context))" />
+                            </MudTooltip>
+                        </MudTd>
+                    </RowTemplate>
+                </MudTable>
+            </MudPaper>
+        </MudItem>
+
+        <MudItem xs="12" lg="4">
+            @if (_selectedTicket is null)
+            {
+                <MudPaper Class="detail-panel empty-detail" Elevation="0">
+                    <MudIcon Icon="@Icons.Material.Filled.ConfirmationNumber" Size="Size.Large" Color="Color.Primary" />
+                    <MudText Typo="Typo.h6">Selecciona un ticket</MudText>
+                    <MudText Typo="Typo.body2">El detalle, historial y cierre apareceran aqui.</MudText>
+                </MudPaper>
+            }
+            else
+            {
+                <MudPaper Class="detail-panel" Elevation="0">
+                    <MudStack Spacing="3">
+                        <MudStack Row="true" AlignItems="AlignItems.Start" Justify="Justify.SpaceBetween">
+                            <div>
+                                <MudText Typo="Typo.overline">@_selectedTicket.Numero</MudText>
+                                <MudText Typo="Typo.h6">@_selectedTicket.Asunto</MudText>
+                            </div>
+                            <MudChip T="string" Size="Size.Small" Color="@StatusColor(_selectedTicket.Estado)">@_selectedTicket.Estado</MudChip>
+                        </MudStack>
+
+                        <MudDivider />
+
+                        <MudStack Spacing="1">
+                            <MudText Typo="Typo.subtitle2">Cliente</MudText>
+                            <MudText Typo="Typo.body2">@_selectedTicket.NombreCliente</MudText>
+                            <MudText Typo="Typo.body2">@_selectedTicket.EmailCliente</MudText>
+                        </MudStack>
+
+                        <MudStack Spacing="1">
+                            <MudText Typo="Typo.subtitle2">Email original</MudText>
+                            <MudText Typo="Typo.body2">@_selectedTicket.CuerpoOriginal</MudText>
+                        </MudStack>
+
+                        <MudStack Spacing="1">
+                            <MudText Typo="Typo.subtitle2">Historial</MudText>
+                            @if (_selectedTicket.Comentarios.Count == 0)
+                            {
+                                <MudText Typo="Typo.body2">Sin comentarios internos.</MudText>
+                            }
+                            else
+                            {
+                                @foreach (var comment in _selectedTicket.Comentarios)
+                                {
+                                    <MudPaper Class="history-item" Elevation="0">
+                                        <MudText Typo="Typo.body2">@comment.Texto</MudText>
+                                        <MudText Typo="Typo.caption">@comment.CreadoEn.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</MudText>
+                                    </MudPaper>
+                                }
+                            }
+                        </MudStack>
+
+                        @if (_selectedTicket.Estado == TicketStatus.Cerrado)
+                        {
+                            <MudAlert Severity="Severity.Success" Variant="Variant.Outlined">
+                                Ticket cerrado. Email de resolucion registrado para envio al cliente.
+                            </MudAlert>
+                        }
+                        else
+                        {
+                            <MudTextField @bind-Value="_resolutionText"
+                                          Label="Resolucion para el cliente"
+                                          Lines="5"
+                                          Variant="Variant.Outlined"
+                                          Required="true"
+                                          Immediate="true" />
+                            <MudButton Variant="Variant.Filled"
+                                       Color="Color.Primary"
+                                       StartIcon="@Icons.Material.Filled.TaskAlt"
+                                       OnClick="CloseSelectedTicket">
+                                Cerrar y preparar email
+                            </MudButton>
+                        }
+                    </MudStack>
+                </MudPaper>
+            }
+        </MudItem>
+    </MudGrid>
+</MudStack>
+
+@code {
+    private IReadOnlyList<Ticket> _tickets = [];
+    private Ticket? _selectedTicket;
+    private string _resolutionText = string.Empty;
+
+    protected override void OnInitialized()
+    {
+        _tickets = TicketWorkspace.GetTickets();
+        _selectedTicket = _tickets.FirstOrDefault();
+    }
+
+    private void SelectTicket(Ticket ticket)
+    {
+        _selectedTicket = ticket;
+        _resolutionText = ticket.ResolucionTexto ?? string.Empty;
+    }
+
+    private void CloseSelectedTicket()
+    {
+        if (_selectedTicket is null)
+        {
+            return;
+        }
+
+        try
+        {
+            _selectedTicket = TicketWorkspace.CloseTicket(_selectedTicket.Id, _resolutionText);
+            _tickets = TicketWorkspace.GetTickets();
+            Snackbar.Add("Ticket cerrado y email saliente registrado.", Severity.Success);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add(ex.Message, Severity.Error);
+        }
+    }
+
+    private string SelectedRowClass(Ticket ticket, int rowNumber)
+    {
+        return _selectedTicket?.Id == ticket.Id ? "selected-ticket-row" : string.Empty;
+    }
+
+    private static Color PriorityColor(TicketPriority priority) => priority switch
+    {
+        TicketPriority.Urgente => Color.Error,
+        TicketPriority.Alta => Color.Warning,
+        TicketPriority.Normal => Color.Info,
+        _ => Color.Default
+    };
+
+    private static Color StatusColor(TicketStatus status) => status switch
+    {
+        TicketStatus.Cerrado => Color.Success,
+        TicketStatus.EnProgreso => Color.Info,
+        TicketStatus.Asignado => Color.Warning,
+        _ => Color.Primary
+    };
+}

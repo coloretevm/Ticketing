@@ -90,7 +90,23 @@ Requisitos:
 - Windows 11 para desarrollo.
 - .NET 8 SDK instalado.
 
-Cuando el SDK este instalado, la aplicacion se podra crear, compilar y ejecutar localmente con comandos `dotnet`.
+Comandos principales:
+
+```powershell
+dotnet restore
+dotnet build
+dotnet tool restore
+dotnet tool run dotnet-ef database update --project src\Tecnidro.Ticketing\Tecnidro.Ticketing.csproj --startup-project src\Tecnidro.Ticketing\Tecnidro.Ticketing.csproj
+dotnet run --project src\Tecnidro.Ticketing\Tecnidro.Ticketing.csproj --launch-profile http
+```
+
+Durante el desarrollo local la app queda disponible en:
+
+```text
+http://localhost:5274
+```
+
+El dashboard y la pantalla de tickets usan datos demo en memoria mientras se implementa la persistencia real y la integracion con Microsoft Graph.
 
 ## Despliegue previsto
 

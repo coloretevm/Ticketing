@@ -1,0 +1,98 @@
+@page "/"
+@inject TicketWorkspaceService Tickets
+
+<PageTitle>Dashboard | Tecnidro Ticketing</PageTitle>
+
+@{
+    var summary = Tickets.GetSummary();
+    var latest = Tickets.GetTickets().Take(5).ToList();
+}
+
+<MudStack Spacing="4">
+    <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Class="page-heading">
+        <div>
+            <MudText Typo="Typo.h4">Dashboard operativo</MudText>
+            <MudText Typo="Typo.body1" Color="Color.Secondary">Tickets generados desde Outlook y gestion interna Tecnidro.</MudText>
+        </div>
+        <MudButton Href="tickets" Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.ConfirmationNumber">
+            Ver tickets
+        </MudButton>
+    </MudStack>
+
+    <MudGrid Spacing="3">
+        <MudItem xs="12" sm="6" md="3">
+            <MudPaper Class="metric-panel" Elevation="0">
+                <MudIcon Icon="@Icons.Material.Filled.AllInbox" Color="Color.Primary" />
+                <MudText Typo="Typo.h4">@summary.Total</MudText>
+                <MudText Typo="Typo.body2">Tickets totales</MudText>
+            </MudPaper>
+        </MudItem>
+        <MudItem xs="12" sm="6" md="3">
+            <MudPaper Class="metric-panel" Elevation="0">
+                <MudIcon Icon="@Icons.Material.Filled.MarkEmailUnread" Color="Color.Info" />
+                <MudText Typo="Typo.h4">@summary.Abiertos</MudText>
+                <MudText Typo="Typo.body2">Abiertos</MudText>
+            </MudPaper>
+        </MudItem>
+        <MudItem xs="12" sm="6" md="3">
+            <MudPaper Class="metric-panel" Elevation="0">
+                <MudIcon Icon="@Icons.Material.Filled.PriorityHigh" Color="Color.Warning" />
+                <MudText Typo="Typo.h4">@summary.Importantes</MudText>
+                <MudText Typo="Typo.body2">Importantes</MudText>
+            </MudPaper>
+        </MudItem>
+        <MudItem xs="12" sm="6" md="3">
+            <MudPaper Class="metric-panel" Elevation="0">
+                <MudIcon Icon="@Icons.Material.Filled.TaskAlt" Color="Color.Success" />
+                <MudText Typo="Typo.h4">@summary.Cerrados</MudText>
+                <MudText Typo="Typo.body2">Cerrados</MudText>
+            </MudPaper>
+        </MudItem>
+    </MudGrid>
+
+    <MudPaper Class="work-surface" Elevation="0">
+        <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween">
+            <MudText Typo="Typo.h6">Ultimos tickets</MudText>
+            <MudChip T="string" Color="Color.Primary" Variant="Variant.Outlined" Size="Size.Small">Datos demo</MudChip>
+        </MudStack>
+
+        <MudTable Items="latest" Hover="true" Dense="true" Class="ticket-table">
+            <HeaderContent>
+                <MudTh>Numero</MudTh>
+                <MudTh>Cliente</MudTh>
+                <MudTh>Asunto</MudTh>
+                <MudTh>Prioridad</MudTh>
+                <MudTh>Estado</MudTh>
+            </HeaderContent>
+            <RowTemplate>
+                <MudTd DataLabel="Numero">@context.Numero</MudTd>
+                <MudTd DataLabel="Cliente">@context.NombreCliente</MudTd>
+                <MudTd DataLabel="Asunto">@context.Asunto</MudTd>
+                <MudTd DataLabel="Prioridad">
+                    <MudChip T="string" Size="Size.Small" Color="@PriorityColor(context.Prioridad)">@context.Prioridad</MudChip>
+                </MudTd>
+                <MudTd DataLabel="Estado">
+                    <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Color="@StatusColor(context.Estado)">@context.Estado</MudChip>
+                </MudTd>
+            </RowTemplate>
+        </MudTable>
+    </MudPaper>
+</MudStack>
+
+@code {
+    private static Color PriorityColor(TicketPriority priority) => priority switch
+    {
+        TicketPriority.Urgente => Color.Error,
+        TicketPriority.Alta => Color.Warning,
+        TicketPriority.Normal => Color.Info,
+        _ => Color.Default
+    };
+
+    private static Color StatusColor(TicketStatus status) => status switch
+    {
+        TicketStatus.Cerrado => Color.Success,
+        TicketStatus.EnProgreso => Color.Info,
+        TicketStatus.Asignado => Color.Warning,
+        _ => Color.Primary
+    };
+}

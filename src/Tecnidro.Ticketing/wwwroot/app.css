@@ -1,0 +1,164 @@
+html,
+body {
+    font-family: Inter, "Segoe UI", Arial, sans-serif;
+    background: #f4f7f5;
+}
+
+a,
+.btn-link {
+    color: #0f766e;
+}
+
+h1:focus {
+    outline: none;
+}
+
+.app-bar {
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.app-drawer {
+    border-right: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.main-content {
+    min-height: 100vh;
+    background:
+        linear-gradient(180deg, rgba(20, 83, 45, 0.06), rgba(244, 247, 245, 0) 240px),
+        #f4f7f5;
+}
+
+.page-container {
+    padding-top: 32px;
+    padding-bottom: 48px;
+}
+
+.page-heading {
+    gap: 16px;
+}
+
+.brand-panel {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 20px 16px 14px;
+    color: #eef7f0;
+}
+
+.brand-mark {
+    display: grid;
+    width: 40px;
+    height: 40px;
+    place-items: center;
+    border-radius: 8px;
+    background: #f59e0b;
+    color: #102019;
+    font-weight: 800;
+}
+
+.main-nav {
+    padding: 8px;
+}
+
+.logout-form {
+    padding: 8px 6px;
+}
+
+.metric-panel,
+.work-surface,
+.detail-panel {
+    border: 1px solid #d9e4dc;
+    border-radius: 8px;
+    background: #ffffff;
+}
+
+.metric-panel {
+    display: grid;
+    min-height: 140px;
+    align-content: space-between;
+    padding: 20px;
+}
+
+.work-surface,
+.detail-panel {
+    padding: 20px;
+}
+
+.detail-panel {
+    position: sticky;
+    top: 88px;
+}
+
+.empty-detail {
+    display: grid;
+    min-height: 280px;
+    place-items: center;
+    text-align: center;
+}
+
+.ticket-table {
+    margin-top: 12px;
+}
+
+.selected-ticket-row {
+    background: #edf7ef;
+}
+
+.history-item {
+    border: 1px solid #e2ebe5;
+    border-radius: 8px;
+    padding: 12px;
+    background: #f8faf8;
+}
+
+.valid.modified:not([type=checkbox]) {
+    outline: 1px solid #26b050;
+}
+
+.invalid {
+    outline: 1px solid #e50000;
+}
+
+.validation-message {
+    color: #e50000;
+}
+
+.blazor-error-boundary {
+    background: #b32121;
+    color: white;
+    padding: 1rem;
+}
+
+.blazor-error-boundary::after {
+    content: "Ocurrio un error.";
+}
+
+#blazor-error-ui {
+    background: #fff3cd;
+    bottom: 0;
+    box-shadow: 0 -1px 2px rgba(0, 0, 0, 0.2);
+    display: none;
+    left: 0;
+    padding: 0.6rem 1.25rem 0.7rem 1.25rem;
+    position: fixed;
+    width: 100%;
+    z-index: 1000;
+}
+
+#blazor-error-ui .dismiss {
+    cursor: pointer;
+    position: absolute;
+    right: 0.75rem;
+    top: 0.5rem;
+}
+
+@media (max-width: 960px) {
+    .page-heading {
+        align-items: flex-start !important;
+        flex-direction: column !important;
+    }
+
+    .detail-panel {
+        position: static;
+    }
+}
