@@ -26,6 +26,7 @@ builder.Services.AddScoped<IdentityRedirectManager>();
 builder.Services.AddScoped<AuthenticationStateProvider, IdentityRevalidatingAuthenticationStateProvider>();
 builder.Services.AddScoped<TicketWorkspaceService>();
 builder.Services.AddScoped<OutlookMailboxService>();
+builder.Services.AddHostedService<OutlookMailboxBackgroundService>();
 builder.Services.Configure<GraphMailboxOptions>(
     builder.Configuration.GetSection(GraphMailboxOptions.SectionName));
 

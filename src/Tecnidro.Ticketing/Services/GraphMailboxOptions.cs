@@ -14,6 +14,8 @@ public class GraphMailboxOptions
 
     public int MaxMessagesPerSync { get; set; } = 20;
 
+    public int SyncIntervalSeconds { get; set; } = 10;
+
     public bool MarkMessagesAsRead { get; set; } = true;
 
     public bool IsConfigured =>
