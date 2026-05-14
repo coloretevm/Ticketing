@@ -13,6 +13,7 @@ public class OutlookMailboxService(
     IOptions<GraphMailboxOptions> options)
 {
     private static readonly string[] GraphScopes = ["https://graph.microsoft.com/.default"];
+    private const string InboxFolderName = "inbox";
 
     public bool IsConfigured => options.Value.IsConfigured;
 
@@ -30,12 +31,11 @@ public class OutlookMailboxService(
 
         var graph = CreateGraphClient(mailboxOptions);
         var messages = await graph.Users[mailboxOptions.MailboxAddress]
-            .MailFolders["Inbox"]
+            .MailFolders[InboxFolderName]
             .Messages
             .GetAsync(request =>
             {
                 request.QueryParameters.Top = mailboxOptions.MaxMessagesPerSync;
-                request.QueryParameters.Filter = "isRead eq false";
                 request.QueryParameters.Select =
                 [
                     "id",
@@ -44,9 +44,9 @@ public class OutlookMailboxService(
                     "bodyPreview",
                     "from",
                     "receivedDateTime",
-                    "importance"
+                    "importance",
+                    "isRead"
                 ];
-                request.QueryParameters.Orderby = ["receivedDateTime desc"];
             }, cancellationToken);
 
         var created = 0;
@@ -58,6 +58,26 @@ public class OutlookMailboxService(
 
         foreach (var message in messages?.Value ?? [])
         {
+            if (message.IsRead == true)
+            {
+                skipped++;
+                continue;
+            }
+
+            if (ShouldIgnoreMessage(message))
+            {
+                skipped++;
+
+                if (mailboxOptions.MarkMessagesAsRead && !string.IsNullOrWhiteSpace(message.Id))
+                {
+                    await graph.Users[mailboxOptions.MailboxAddress]
+                        .Messages[message.Id]
+                        .PatchAsync(new Message { IsRead = true }, cancellationToken: cancellationToken);
+                }
+
+                continue;
+            }
+
             var messageKey = GetMessageKey(message);
             var alreadyExists = await dbContext.Tickets
                 .AnyAsync(ticket => ticket.MessageIdOutlook == messageKey, cancellationToken);
@@ -114,6 +134,97 @@ public class OutlookMailboxService(
             $"Sincronizacion completada. Creados: {created}. Omitidos: {skipped}.");
     }
 
+    public async Task<MailboxDiagnosticResult> DiagnoseMailboxAsync(CancellationToken cancellationToken = default)
+    {
+        var mailboxOptions = options.Value;
+
+        if (!mailboxOptions.IsConfigured)
+        {
+            return new MailboxDiagnosticResult(
+                false,
+                mailboxOptions.MailboxAddress,
+                [],
+                "Falta configurar GraphMailbox: TenantId, ClientId, ClientSecret y MailboxAddress.",
+                [],
+                null);
+        }
+
+        var graph = CreateGraphClient(mailboxOptions);
+        List<MailboxFolderDiagnostic> folders = [];
+        string? foldersError = null;
+        List<MailboxMessageDiagnostic> inboxMessages = [];
+        string? inboxMessagesError = null;
+
+        try
+        {
+            var graphFolders = await graph.Users[mailboxOptions.MailboxAddress]
+                .MailFolders
+                .GetAsync(request =>
+                {
+                    request.QueryParameters.Top = 20;
+                    request.QueryParameters.Select =
+                    [
+                        "id",
+                        "displayName",
+                        "totalItemCount",
+                        "unreadItemCount"
+                    ];
+                }, cancellationToken);
+
+            folders = graphFolders?.Value?
+                .Select(folder => new MailboxFolderDiagnostic(
+                    folder.Id,
+                    folder.DisplayName,
+                    folder.TotalItemCount,
+                    folder.UnreadItemCount))
+                .ToList() ?? [];
+        }
+        catch (Exception ex)
+        {
+            foldersError = ex.Message;
+        }
+
+        try
+        {
+            var graphMessages = await graph.Users[mailboxOptions.MailboxAddress]
+                .MailFolders[InboxFolderName]
+                .Messages
+                .GetAsync(request =>
+                {
+                    request.QueryParameters.Top = 5;
+                    request.QueryParameters.Select =
+                    [
+                        "id",
+                        "subject",
+                        "from",
+                        "receivedDateTime",
+                        "isRead"
+                    ];
+                }, cancellationToken);
+
+            inboxMessages = graphMessages?.Value?
+                .Select(message => new MailboxMessageDiagnostic(
+                    message.Id,
+                    message.Subject,
+                    message.From?.EmailAddress?.Address,
+                    message.ReceivedDateTime,
+                    message.IsRead))
+                .ToList() ?? [];
+        }
+        catch (Exception ex)
+        {
+            inboxMessagesError = ex.Message;
+        }
+
+        return new MailboxDiagnosticResult(
+            true,
+            mailboxOptions.MailboxAddress,
+            folders,
+            foldersError,
+            inboxMessages,
+            inboxMessagesError);
+    }
+
     private static GraphServiceClient CreateGraphClient(GraphMailboxOptions mailboxOptions)
     {
         var credential = new ClientSecretCredential(
@@ -129,6 +240,14 @@ public class OutlookMailboxService(
         return !string.IsNullOrWhiteSpace(message.InternetMessageId)
             ? message.InternetMessageId
             : message.Id ?? Guid.NewGuid().ToString("N");
+    }
+
+    private static bool ShouldIgnoreMessage(Message message)
+    {
+        var senderAddress = message.From?.EmailAddress?.Address;
+
+        return senderAddress?.StartsWith("MicrosoftExchange", StringComparison.OrdinalIgnoreCase) == true ||
+            string.Equals(message.Subject, "Your mailbox is full", StringComparison.OrdinalIgnoreCase);
     }
 
     private static TicketPriority MapPriority(Importance? importance)

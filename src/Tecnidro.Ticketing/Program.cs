@@ -55,6 +55,24 @@ var app = builder.Build();
 if (app.Environment.IsDevelopment())
 {
     app.UseMigrationsEndPoint();
+    app.MapGet("/dev/sync-outlook", async (OutlookMailboxService mailbox, CancellationToken cancellationToken) =>
+    {
+        try
+        {
+            var result = await mailbox.SyncUnreadInboxAsync(cancellationToken);
+            return Results.Ok(result);
+        }
+        catch (Exception ex)
+        {
+            return Results.Problem(ex.ToString());
+        }
+    });
+
+    app.MapGet("/dev/diagnose-outlook", async (OutlookMailboxService mailbox, CancellationToken cancellationToken) =>
+    {
+        var result = await mailbox.DiagnoseMailboxAsync(cancellationToken);
+        return Results.Ok(result);
+    });
 }
 else
 {
