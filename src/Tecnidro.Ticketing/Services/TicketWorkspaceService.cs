@@ -58,6 +58,23 @@ public class TicketWorkspaceService(ApplicationDbContext dbContext)
         return ticket;
     }
 
+    public async Task<int> DeleteTicketsAsync(IReadOnlyCollection<int> ticketIds, CancellationToken cancellationToken = default)
+    {
+        if (ticketIds.Count == 0)
+        {
+            return 0;
+        }
+
+        var tickets = await dbContext.Tickets
+            .Where(ticket => ticketIds.Contains(ticket.Id))
+            .ToListAsync(cancellationToken);
+
+        dbContext.Tickets.RemoveRange(tickets);
+        await dbContext.SaveChangesAsync(cancellationToken);
+
+        return tickets.Count;
+    }
+
     public async Task<DashboardSummary> GetSummaryAsync(CancellationToken cancellationToken = default)
     {
         var total = await dbContext.Tickets.CountAsync(cancellationToken);

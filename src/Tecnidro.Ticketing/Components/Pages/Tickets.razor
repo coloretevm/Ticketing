@@ -41,8 +41,73 @@
     <MudGrid Spacing="3">
         <MudItem xs="12" lg="8">
             <MudPaper Class="work-surface" Elevation="0">
+                <MudStack Row="true"
+                          AlignItems="AlignItems.Center"
+                          Justify="Justify.SpaceBetween"
+                          Class="mb-3"
+                          Style="gap: 12px; flex-wrap: wrap;">
+                    <MudText Typo="Typo.body2" Color="Color.Secondary">
+                        @_selectedTicketIds.Count seleccionados
+                    </MudText>
+                    <MudStack Row="true" AlignItems="AlignItems.Center" Style="gap: 8px; flex-wrap: wrap;">
+                        <MudButton Variant="Variant.Outlined"
+                                   Color="Color.Primary"
+                                   Size="Size.Small"
+                                   StartIcon="@Icons.Material.Filled.SelectAll"
+                                   Disabled="_tickets.Count == 0"
+                                   OnClick="SelectAllTickets">
+                            Seleccionar todos
+                        </MudButton>
+                        <MudButton Variant="Variant.Outlined"
+                                   Color="Color.Default"
+                                   Size="Size.Small"
+                                   StartIcon="@Icons.Material.Filled.Deselect"
+                                   Disabled="_selectedTicketIds.Count == 0"
+                                   OnClick="ClearTicketSelection">
+                            Limpiar seleccion
+                        </MudButton>
+                        <MudButton Variant="Variant.Filled"
+                                   Color="Color.Error"
+                                   Size="Size.Small"
+                                   StartIcon="@Icons.Material.Filled.Delete"
+                                   Disabled="_selectedTicketIds.Count == 0 || _deletingTickets"
+                                   OnClick="RequestDeleteSelectedTickets">
+                            Eliminar seleccionados
+                        </MudButton>
+                    </MudStack>
+                </MudStack>
+
+                @if (_confirmingDelete)
+                {
+                    <MudAlert Severity="Severity.Error" Variant="Variant.Outlined" Class="mb-3">
+                        <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Style="gap: 12px; flex-wrap: wrap;">
+                            <MudText Typo="Typo.body2">
+                                Vas a eliminar @_selectedTicketIds.Count ticket(s). Esta accion tambien borra historial y logs asociados.
+                            </MudText>
+                            <MudStack Row="true" AlignItems="AlignItems.Center" Style="gap: 8px;">
+                                <MudButton Variant="Variant.Text"
+                                           Color="Color.Default"
+                                           Size="Size.Small"
+                                           Disabled="_deletingTickets"
+                                           OnClick="CancelDeleteSelectedTickets">
+                                    Cancelar
+                                </MudButton>
+                                <MudButton Variant="Variant.Filled"
+                                           Color="Color.Error"
+                                           Size="Size.Small"
+                                           StartIcon="@Icons.Material.Filled.DeleteForever"
+                                           Disabled="_deletingTickets"
+                                           OnClick="DeleteSelectedTicketsAsync">
+                                    @(_deletingTickets ? "Eliminando..." : "Confirmar")
+                                </MudButton>
+                            </MudStack>
+                        </MudStack>
+                    </MudAlert>
+                }
+
                 <MudTable Items="_tickets" Hover="true" Dense="true" Breakpoint="Breakpoint.Sm" Class="ticket-table" RowClassFunc="SelectedRowClass">
                     <HeaderContent>
+                        <MudTh></MudTh>
                         <MudTh>Numero</MudTh>
                         <MudTh>Cliente</MudTh>
                         <MudTh>Asunto</MudTh>
@@ -51,6 +116,13 @@
                         <MudTh></MudTh>
                     </HeaderContent>
                     <RowTemplate>
+                        <MudTd DataLabel="Seleccionar">
+                            <MudCheckBox T="bool"
+                                         Value="@_selectedTicketIds.Contains(context.Id)"
+                                         ValueChanged="@((bool value) => ToggleTicketSelection(context.Id, value))"
+                                         Color="Color.Primary"
+                                         Dense="true" />
+                        </MudTd>
                         <MudTd DataLabel="Numero">@context.Numero</MudTd>
                         <MudTd DataLabel="Cliente">@context.NombreCliente</MudTd>
                         <MudTd DataLabel="Asunto">@context.Asunto</MudTd>
@@ -154,7 +226,10 @@
     private IReadOnlyList<Ticket> _tickets = [];
     private Ticket? _selectedTicket;
     private string _resolutionText = string.Empty;
+    private readonly HashSet<int> _selectedTicketIds = [];
     private bool _syncing;
+    private bool _deletingTickets;
+    private bool _confirmingDelete;
     private bool _mailboxConfigured;
     private string? _syncMessage;
     private Severity _syncSeverity = Severity.Info;
@@ -168,14 +243,96 @@
     private async Task ReloadTicketsAsync()
     {
         _tickets = await TicketWorkspace.GetTicketsAsync();
-        _selectedTicket = _tickets.FirstOrDefault();
+        _selectedTicketIds.RemoveWhere(id => _tickets.All(ticket => ticket.Id != id));
+        _selectedTicket = _selectedTicket is null
+            ? _tickets.FirstOrDefault()
+            : _tickets.FirstOrDefault(ticket => ticket.Id == _selectedTicket.Id) ?? _tickets.FirstOrDefault();
         _resolutionText = _selectedTicket?.ResolucionTexto ?? string.Empty;
+
+        if (_selectedTicketIds.Count == 0)
+        {
+            _confirmingDelete = false;
+        }
     }
 
     private void SelectTicket(Ticket ticket)
     {
         _selectedTicket = ticket;
         _resolutionText = ticket.ResolucionTexto ?? string.Empty;
+    }
+
+    private void ToggleTicketSelection(int ticketId, bool selected)
+    {
+        if (selected)
+        {
+            _selectedTicketIds.Add(ticketId);
+        }
+        else
+        {
+            _selectedTicketIds.Remove(ticketId);
+        }
+
+        if (_selectedTicketIds.Count == 0)
+        {
+            _confirmingDelete = false;
+        }
+    }
+
+    private void SelectAllTickets()
+    {
+        foreach (var ticket in _tickets)
+        {
+            _selectedTicketIds.Add(ticket.Id);
+        }
+    }
+
+    private void ClearTicketSelection()
+    {
+        _selectedTicketIds.Clear();
+        _confirmingDelete = false;
+    }
+
+    private void RequestDeleteSelectedTickets()
+    {
+        if (_selectedTicketIds.Count > 0)
+        {
+            _confirmingDelete = true;
+        }
+    }
+
+    private void CancelDeleteSelectedTickets()
+    {
+        _confirmingDelete = false;
+    }
+
+    private async Task DeleteSelectedTicketsAsync()
+    {
+        if (_selectedTicketIds.Count == 0)
+        {
+            return;
+        }
+
+        _deletingTickets = true;
+
+        try
+        {
+            var idsToDelete = _selectedTicketIds.ToArray();
+            var deletedCount = await TicketWorkspace.DeleteTicketsAsync(idsToDelete);
+
+            _selectedTicketIds.Clear();
+            _confirmingDelete = false;
+            await ReloadTicketsAsync();
+
+            Snackbar.Add($"{deletedCount} ticket(s) eliminados.", Severity.Success);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error eliminando tickets: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _deletingTickets = false;
+        }
     }
 
     private async Task CloseSelectedTicket()
